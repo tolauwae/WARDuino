@@ -117,7 +117,6 @@ void Debugger::notifyBreakpoint(uint8_t *pc_ptr) {
 bool Debugger::checkDebugMessages(Module *m, RunningState *program_state) {
     uint8_t *interruptData = this->getDebugMessage();
     if (interruptData == nullptr) {
-        fflush(stdout);
         return false;
     }
 

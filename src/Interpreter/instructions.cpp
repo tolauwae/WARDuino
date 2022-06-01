@@ -1474,7 +1474,6 @@ bool interpret(Module *m) {
 
         while (m->warduino->debugger->checkDebugMessages(m, &program_state)) {
         };
-        fflush(stdout);
         reset_wdt();
 
         if (program_state == WARDUINOpause) {
