@@ -20,7 +20,6 @@
 #include <cstring>
 
 #include "../Memory/mem.h"
-//#include "../RFC/SocketServer.h"
 #include "../Utils/macros.h"
 #include "../Utils/util.h"
 #include "primitives.h"
@@ -57,6 +56,7 @@ void write_spi_bytes_16_prim(int times, uint32_t color) {
 #define NUM_PRIMITIVES_ARDUINO 37
 
 #define ALL_PRIMITIVES (NUM_PRIMITIVES + NUM_PRIMITIVES_ARDUINO)
+#define ALL_ISRS 34
 
 // Global index for installing primitives
 int prim_index = 0;
@@ -79,9 +79,27 @@ double sensor_emu = 0;
         }                                                                  \
     }
 
+#define install_isr(isr_index)                                       \
+    {                                                                \
+        dbg_info("installing isr number: %d  of %d with name: %s\n", \
+                 isr_index, ALL_ISRS, isr_##isr_index);              \
+        if (isr_index < ALL_ISRS) {                                  \
+            ISREntry *p = &ISRs[isr_index];                          \
+            p->name = "isr_##isr_index";                             \
+            p->ISR_callback = &(isr_##isr_index);                    \
+        } else {                                                     \
+            FATAL("isr_index out of bounds");                        \
+        }                                                            \
+    }
+
 #define def_prim(function_name, type) \
     Type function_name##_type = type; \
     bool function_name(Module *m)
+
+#define def_isr(pin)                                               \
+    void isr_##pin() {                                             \
+        CallbackHandler::push_event(#pin, (unsigned char *)"", 0); \
+    }
 
 // TODO: use fp
 #define pop_args(n) m->sp -= n
@@ -104,6 +122,12 @@ double sensor_emu = 0;
 
 // The primitive table
 PrimitiveEntry primitives[ALL_PRIMITIVES];
+
+typedef struct ISREntry {
+    const char *name;
+    void (*ISR_callback)();
+} ISREntry;
+ISREntry ISRs[ALL_ISRS];
 
 //
 uint32_t param_arr_len0[0] = {};
@@ -307,7 +331,6 @@ def_prim(wifi_connected, NoneToOneU32) {
 
 def_prim(wifi_localip, twoToOneU32) {
     uint32_t buff = arg1.uint32;
-    uint32_t size = arg0.uint32;
     IPAddress ip = WiFi.localIP();
 
     String ipString = String(ip[0]);
@@ -528,45 +551,18 @@ def_prim(chip_ledc_attach_pin, twoToNoneU32) {
 
 // INTERRUPTS
 
-class Interrupt {
-   public:
-    void setup(uint8_t pin, void (*ISR_callback)(void), uint8_t mode) {
-        this->pin = pin;
-        this->mode = mode;
-        Serial.print("Attaching to ");
-        Serial.print(pin);
-        Serial.println("");
-        attachInterrupt(digitalPinToInterrupt(pin), ISR_callback, mode);
-    }
-
-    void handleInterrupt();
-    uint8_t pin;
-
-   private:
-    uint8_t mode;
-    void (*ISR_callback)();
-};
-
-void Interrupt::handleInterrupt() {
-    String topic = "interrupt";
-    topic += String(pin);
-    auto *empty = reinterpret_cast<const unsigned char *>("");
-    CallbackHandler::push_event(topic.c_str(), empty, 0);
-}
-
-std::vector<Interrupt *> handlers;
+def_isr(25);
+def_isr(26);
+def_isr(33);
 
 def_prim(subscribe_interrupt, threeToNoneU32) {
     uint8_t pin = arg2.uint32;   // GPIOPin
     uint8_t fidx = arg1.uint32;  // Callback function
     uint8_t mode = arg0.uint32;
 
-    Interrupt *handler = new Interrupt();
-    handlers.push_back(handler);
-    handler->setup(
-        pin, [] { handlers.back()->handleInterrupt(); }, mode);
+    attachInterrupt(digitalPinToInterrupt(pin), ISRs[pin].ISR_callback, mode);
 
-    String callback_id = "interrupt";
+    String callback_id = "";
     callback_id += String(pin);
     Callback c = Callback(m, callback_id.c_str(), fidx);
     CallbackHandler::add_callback(c);
@@ -578,14 +574,7 @@ def_prim(subscribe_interrupt, threeToNoneU32) {
 def_prim(unsubscribe_interrupt, oneToNoneU32) {
     uint8_t pin = arg0.uint32;
 
-    auto it = std::remove_if(
-        handlers.begin(), handlers.end(),
-        [pin](Interrupt *handler) { return handler->pin == pin; });
-
-    if (it != handlers.end()) {
-        handlers.erase(it, handlers.end());
-        detachInterrupt(digitalPinToInterrupt(pin));
-    }
+    detachInterrupt(digitalPinToInterrupt(pin));
 
     pop_args(1);
     return true;
@@ -853,6 +842,9 @@ int32_t http_post_request(Module *m, const String url, const String body,
 // Installing all the primitives
 //------------------------------------------------------
 void install_primitives() {
+    install_isr(25);
+    install_isr(26);
+    install_isr(33);
     dbg_info("INSTALLING PRIMITIVES\n");
     dbg_info("INSTALLING ARDUINO\n");
     install_primitive(abort);
