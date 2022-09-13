@@ -162,7 +162,7 @@ bool Debugger::checkDebugMessages(Module *m, RunningState *program_state) {
             free(interruptData);
             break;
         case interruptBPAdd:  // Breakpoint
-            //TODO remove until break
+            // TODO remove until break
             printf("adding bp!\n");
             this->handleInterruptBP(interruptData);
             free(interruptData);
@@ -214,6 +214,13 @@ bool Debugger::checkDebugMessages(Module *m, RunningState *program_state) {
                 debug("paused program execution\n");
                 CallbackHandler::manual_event_resolution = true;
                 dbg_info("Manual event resolution is on.");
+#ifdef ARDUINO
+                printf("(MCU) Manual event resolution is %s\n",
+                       CallbackHandler::manual_event_resolution ? "on" : "off");
+#else
+                printf("(Emulator) Manual event resolution is %s\n",
+                       CallbackHandler::manual_event_resolution ? "on" : "off");
+#endif
                 this->receivingData = true;
                 this->freeState(m, interruptData);
                 free(interruptData);
@@ -246,6 +253,7 @@ bool Debugger::checkDebugMessages(Module *m, RunningState *program_state) {
         case interruptDronify: {
             // 0x65 the wifi ssid  \0  wifipass  \0
             //  1   |____len_____|  1
+            printf("(MCU) dronify\n");
             char *ssid = (char *)(interruptData + 1);
             size_t ssid_len = strlen(ssid);
             char *pass = (char *)(interruptData + 1 + ssid_len + 1);
@@ -279,6 +287,7 @@ bool Debugger::checkDebugMessages(Module *m, RunningState *program_state) {
             break;
 #endif
         case interruptRecvCallbackmapping:
+            printf("receivingcallbackmappings\n");
             Debugger::updateCallbackmapping(
                 m, reinterpret_cast<const char *>(interruptData + 2));
             break;
@@ -315,8 +324,11 @@ void Debugger::printValue(StackValue *v, uint32_t idx, bool end = false) const {
             snprintf(buff, 255, R"("type":"F64","value":%.7f)", v->value.f64);
             break;
         default:
-            snprintf(buff, 255, R"("type":"%02x","value":"%)" PRIx64 "\"",
-                     v->value_type, v->value.uint64);
+            // TODO remove next and replace with comment
+            // snprintf(buff, 255, R"("type":"%02x","value":"%)" PRIx64 "\"",
+            //          v->value_type, v->value.uint64);
+            snprintf(buff, 255, R"("type":"i32","value":%)" PRIi32,
+                     v->value.uint32);
     }
     dprintf(this->socket, R"({"idx":%d,%s}%s)", idx, buff, end ? "" : ",");
 }
@@ -464,9 +476,13 @@ void Debugger::dumpLocals(Module *m) const {
                          v->value.f64);
                 break;
             default:
-                snprintf(_value_str, 255,
-                         R"("type":"%02x","value":"%)" PRIx64 "\"",
-                         v->value_type, v->value.uint64);
+                // TODO remove next it is temporary fix and uncomment commented
+                // snprintf
+                snprintf(_value_str, 255, R"("type":"i32","value":%)" PRIi32,
+                         v->value.uint32);
+                // snprintf(_value_str, 255,
+                //          R"("type":"%02x","value":"%)" PRIx64 "\"",
+                //          v->value_type, v->value.uint64);
         }
 
         dprintf(this->socket, "{%s, \"index\":%u}%s", _value_str,
