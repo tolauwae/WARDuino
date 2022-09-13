@@ -89,6 +89,13 @@ bool CallbackHandler::resolve_event(bool force) {
 
     if (!force && (CallbackHandler::manual_event_resolution ||
                    WARDuino::instance()->program_state == WARDUINOpause)) {
+        if (CallbackHandler::manual_event_resolution) {
+            printf("not resolving because manual_event_resolution is true\n");
+        }
+        if (WARDuino::instance()->program_state == WARDUINOpause) {
+            printf("not resolving because program_state is paused\n");
+        }
+
         return true;
     }
 
