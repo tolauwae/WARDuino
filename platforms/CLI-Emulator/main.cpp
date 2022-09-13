@@ -110,11 +110,17 @@ void startDebuggerSocket(WARDuino *wac, Module *m) {
     int socket_fd = createSocketFileDescriptor();
     struct sockaddr_in address = createAddress(8192);
     bindSocketToAddress(socket_fd, address);
+    bool informed = false;
     startListening(socket_fd);
 
     int valread;
     uint8_t buffer[1024] = {0};
     while (true) {
+        if (!informed) {
+            informed = true;
+            printf("EMULATOR STARTED!\n");
+            fflush(stdout);
+        }
         int socket = listenForIncomingConnection(socket_fd, address);
         wac->debugger->socket = socket;
         //        wac->debugger->socket = fileno(stdout); // todo remove
@@ -201,7 +207,7 @@ int main(int argc, const char *argv[]) {
     if (m) {
         pthread_t id;
         uint8_t command[] = {'0', '3', '\n'};
-        // wac.handleInterrupt(3, command);
+        wac->handleInterrupt(3, command);
         m->warduino = wac;
         pthread_create(&id, nullptr, runWAC, nullptr);
         if (no_socket) {
