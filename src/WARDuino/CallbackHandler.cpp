@@ -15,6 +15,11 @@ bool CallbackHandler::manual_event_resolution = false;
 bool CallbackHandler::resolving_event = false;
 #ifdef ARDUINO
 size_t CallbackHandler::pushed_cursor = 0;
+void CallbackHandler::decrease_push_cursor() {
+    if (CallbackHandler::pushed_cursor > 0) {
+        pushed_cursor--;
+    }
+}
 
 bool should_push_event(SocketServer *server) {
     return server != nullptr && server->hasPushClient() &&
@@ -84,25 +89,43 @@ bool CallbackHandler::resolve_event(bool force) {
         server->printf2Client(server->pushClient,
                               R"({"topic":"%s","payload":"%s"})",
                               e.topic.c_str(), e.payload.c_str());
+
+        CallbackHandler::events->pop_front();
+        CallbackHandler::decrease_push_cursor();
+        printf("(MCU) Total events left %lu\n",
+               CallbackHandler::events->size());
+        return !CallbackHandler::events->empty();
     }
 #endif
 
     if (!force && (CallbackHandler::manual_event_resolution ||
                    WARDuino::instance()->program_state == WARDUINOpause)) {
-        if (CallbackHandler::manual_event_resolution) {
-            printf("not resolving because manual_event_resolution is true\n");
-        }
-        if (WARDuino::instance()->program_state == WARDUINOpause) {
-            printf("not resolving because program_state is paused\n");
-        }
-
         return true;
     }
 
     CallbackHandler::resolving_event = true;
     CallbackHandler::events->pop_front();
 #ifdef ARDUINO
-    CallbackHandler::pushed_cursor--;
+    if (CallbackHandler::manual_event_resolution) {
+        printf("(MCU) resolving_event (manual resolution)\n");
+    } else if (WARDuino::instance()->program_state == WARDUINOpause) {
+        printf("(MCU) resolving_event (not paused state)\n");
+    } else {
+        printf("(MCU) resolving_event (%lu remaining)\n",
+               CallbackHandler::events->size());
+    }
+    CallbackHandler::decrease_push_cursor();
+
+#else
+    if (CallbackHandler::manual_event_resolution) {
+        printf("emulator resolving_event (manual resolution)\n");
+    } else if (WARDuino::instance()->program_state == WARDUINOpause) {
+        printf("emulator resolving_event (not paused state)\n");
+    } else {
+        printf("Emulator resolving_event (%lu remaining)\n",
+               CallbackHandler::events->size());
+    }
+
 #endif
 
     debug("Resolving an event. (%lu remaining)\n",
@@ -179,7 +202,10 @@ void Callback::resolve_event(const Event &e) {
         module->memory.bytes[start + i] = (uint32_t)e.payload[i];
     }
 
-    // Push arguments (5 args)
+    // TODO: potential issue. Pushing the arguments may change the type of the
+    // StackValue
+    // TODO: I verified this by woodumping the state and generating events to
+    // resolve Push arguments (5 args)
     module->stack[++module->sp].value.uint32 = start - topic.length();
     module->stack[++module->sp].value.uint32 = topic.length();
     module->stack[++module->sp].value.uint32 = start;

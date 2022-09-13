@@ -29,6 +29,7 @@ class CallbackHandler {
    public:
 #ifdef ARDUINO
     static size_t pushed_cursor;
+    static void decrease_push_cursor();
 #endif
 
     static size_t event_count();
