@@ -100,6 +100,9 @@ ProxyServer *ProxyServer::getServer() {
 bool ProxyServer::registerMCUHost(uint8_t **data) {
     int pull = (int)read_B32(data);
     int push = pull + 1;
+    pull = 8080;
+    push = 8081;
+
     auto hostsize = (uint8_t)(*data)[0];
     char *hostname = new char[hostsize + 1];
     memcpy((void *)hostname, ++(*data), hostsize);
