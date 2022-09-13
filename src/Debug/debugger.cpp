@@ -162,7 +162,13 @@ bool Debugger::checkDebugMessages(Module *m, RunningState *program_state) {
             free(interruptData);
             break;
         case interruptBPAdd:  // Breakpoint
+            //TODO remove until break
+            printf("adding bp!\n");
+            this->handleInterruptBP(interruptData);
+            free(interruptData);
+            break;
         case interruptBPRem:  // Breakpoint remove
+            printf("removing bp!\n");
             this->handleInterruptBP(interruptData);
             free(interruptData);
             break;
@@ -977,7 +983,7 @@ void Debugger::handleProxyCall(Module *m, RunningState *program_state,
 
     Block *func = &m->functions[fidx];
     StackValue *args = RFC::readRFCArgs(func, data);
-    printf("Registering %" PRIu32 "as Callee\n", func->fidx);
+    printf("Registering %" PRIu32 " as Callee\n", func->fidx);
 
     // preserving execution state of call that got interrupted
     ExecutionState *executionState = new ExecutionState;
