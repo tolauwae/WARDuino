@@ -275,7 +275,7 @@ void RFC::deserializeRFCResult() {
     switch (this->result->value_type) {
         case I32:
             memcpy(&result->value.uint32, call_result + 1, sizeof(uint32_t));
-            dbg_info("deserialized U32 %" PRIu32 "\n", result->value.uint32);
+            dbg_info("deserialized U32 %d\n", result->value.uint32);
             break;
         case F32:
             memcpy(&result->value.f32, call_result + 1, sizeof(float));
@@ -347,8 +347,7 @@ StackValue *RFC::readRFCArgs(Block *func, uint8_t *data) {
             case I32: {
                 memcpy(&args[i].value.uint32, data, sizeof(uint32_t));
                 data += sizeof(uint32_t);
-                printf("arg %d: i32 value %" PRIu32 "\n", i,
-                       args[i].value.uint32);
+                printf("arg %d: i32 value %d\n", i, args[i].value.uint32);
                 break;
             }
             case F32: {
