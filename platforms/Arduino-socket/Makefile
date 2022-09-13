@@ -1,6 +1,6 @@
 # Arduino Socket Platform
 
-PORT = /dev/ttyUSB0
+PORT = /dev/cu.usbserial-120
 FQBN = esp32:esp32:esp32wrover
 
 CONFIG = .config
