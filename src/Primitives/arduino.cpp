@@ -124,10 +124,7 @@ int resolve_isr(int pin) {
 
 // Primitives
 
-#define NUM_PRIMITIVES 0
-#define NUM_PRIMITIVES_ARDUINO 37
-
-#define ALL_PRIMITIVES (NUM_PRIMITIVES + NUM_PRIMITIVES_ARDUINO)
+#define ALL_PRIMITIVES 39
 
 // Global index for installing primitives
 int prim_index = 0;
@@ -327,6 +324,23 @@ def_prim(micros, NoneToOneU64) {
     pushUInt64(micros());
     return true;
 }
+
+// Benchmarks
+
+unsigned long bench = 0;
+
+def_prim(bench_start, NoneToNoneU32) {
+    bench = micros();
+    return true;
+}
+
+def_prim(bench_finish, NoneToOneU64) {
+    unsigned long _micros = micros();
+    pushUInt64(_micros - bench);
+    return true;
+}
+
+// Printing
 
 def_prim(print_int, oneToNoneU32) {
     uint32_t integer = arg0.uint32;
@@ -895,6 +909,9 @@ void install_primitives() {
     install_primitive(abort);
     install_primitive(millis);
     install_primitive(micros);
+
+    install_primitive(bench_start);
+    install_primitive(bench_finish);
 
     install_primitive(print_int);
     install_primitive(print_string);
