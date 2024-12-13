@@ -28,3 +28,14 @@ jobs:
           message: "🔖 Bump version to ${{ inputs.version }}"
           default_author: github_actions
 
+      - uses: octokit/request-action@v2.x
+        id: create_release
+        with:
+          route: POST /repos/{owner}/{repo}/releases
+          owner: TOPLLab
+          repo: WARDuino
+          tag_name: "'${{ inputs.version }}'"
+          name: "'${{ inputs.version }}'"
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
