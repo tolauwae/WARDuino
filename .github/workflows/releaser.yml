@@ -22,11 +22,17 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
 
-      - name: Create and push new branch
+      - name: Update metadata
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b release
-          git add CMakeLists.txt library.properties
-          git commit -m "🔖 Bump version to ${{ inputs.version }}"
-          git push origin release
+          #git add CMakeLists.txt library.properties
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "🔖 Bump version to ${{ inputs.version }}"
+          branch: release
+          title: "Release for ${{ inputs.version }}"
+          body: "This is an automated PR for the next release, version: ${{ inputs.version }}."
+
